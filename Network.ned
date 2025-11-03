@@ -33,11 +33,11 @@ network GarbageNetwork
             @display("p=74,160");
         }
     connections allowunconnected:
-        smartphone.out[0] --> SlowLink --> can1.in[0];
-        can1.out --> SlowLink --> smartphone.in[0];
+        smartphone.out[0] --> FastLink --> can1.in[0];
+        can1.out --> FastLink --> smartphone.in[0];
 
-        smartphone.out[1] --> SlowLink --> can2.in[0];
-        can2.out --> SlowLink --> smartphone.in[1];
+        smartphone.out[1] --> FastLink --> can2.in[0];
+        can2.out --> FastLink --> smartphone.in[1];
 
         smartphone.out[2] --> SlowLink --> cloud.in[0];
         cloud.out[0] --> SlowLink --> smartphone.in[2];

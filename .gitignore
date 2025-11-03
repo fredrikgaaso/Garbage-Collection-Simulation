@@ -1,0 +1,7 @@
+.cproject
+.qtenvrc
+.settings/
+.oppbuildspec
+.project
+*_m.h
+*_m.cc

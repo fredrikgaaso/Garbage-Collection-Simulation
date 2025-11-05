@@ -21,6 +21,8 @@ class Smartphone : public cSimpleModule
     simtime_t retryInterval = 0.5;
     static const int MAX_TRIES = 4;
 
+    double travelTime;
+
     int tries[2] = {0,0};
     bool waiting[2] = {true,true};
     bool yes[2] = {false,false};
@@ -72,6 +74,11 @@ class Smartphone : public cSimpleModule
     const double W = 780,  H = 1350;
 
 
+    double msPhoneToCan = -1, msCanToPhone = -1;
+    double msPhoneToCloud = -1, msCloudToPhone = -1;
+    double msCanToCloud = -1;
+
+
     std::string pickBody(const std::string& mode) {
         if (mode == "fast") {
             return
@@ -80,13 +87,14 @@ class Smartphone : public cSimpleModule
                     "Fast connection from the smartphone to others (time it takes) = \n"
                     "Fast connection from others to the smartphone (time it takes) = \n\n"
                     "Connection from the can to others (time it takes) =\n"
-                    "Connection from others to the can (time it takes) =\n\n"
-                    "Connection from the anotherCan to others (time it takes) =\n"
-                    "Connection from others to the anotherCan (time it takes) =\n\n"
-                    "Slow connection from the Cloud to others (time it takes) = 0\n"
-                    "Slow connection from others to the Cloud (time it takes) = 0\n"
-                    "Fast connection from the Cloud to others (time it takes) =\n"
-                    "Fast connection from others to the Cloud (time it takes) =";
+                                        "Connection from others to the can (time it takes) =\n\n"
+                                        "Connection from the anotherCan to others (time it takes) =\n"
+                                        "Connection from others to the anotherCan (time it takes) =\n\n"
+                                        "Slow connection from the Cloud to others (time it takes) =\n"
+                                        "Slow connection from others to the Cloud (time it takes) =\n"
+                                        "Fast connection from the Cloud to others (time it takes) =0\n"
+                                        "Fast connection from others to the Cloud (time it takes) =0";
+            ;
 
         } else if (mode == "slow") {
             return
@@ -124,7 +132,7 @@ class Smartphone : public cSimpleModule
     virtual ~Smartphone() override;
     virtual void initialize() override;
     virtual void handleMessage(cMessage *msg) override;
-
+    void updateLegend();
     void sendQuery(int whichCan);
     void setupMobility();
     void parseMobilityDefinition(cXMLElement *root);
@@ -148,7 +156,7 @@ void Smartphone::initialize()
     tCan1 = new cMessage("tCan1");
     tCan2 = new cMessage("tCan2");
 
-
+    updateLegend();
 
     cModule *can1 = getParentModule()->getSubmodule("can1");
     double x1 = can1->par("x").doubleValue();
@@ -268,6 +276,50 @@ void Smartphone::sendQuery(int whichCan)
     tries[whichCan]++;
 }
 
+void Smartphone::updateLegend() {
+    if (!body) return;
+
+    auto fmt = [](double vms) {
+        if (vms < 0) return std::string("0");        // not yet measured -> show 0 (like the videos)
+        char b[32]; std::snprintf(b, sizeof(b), "%.2f ms", vms);
+        return std::string(b);
+    };
+
+    // Map the professor's generic phrasing to your links:
+    // "Slow connection from the smartphone to others"  -> BLE Smartphone -> Can
+    // "Slow connection from others to the smartphone"  -> BLE Can -> Smartphone
+    // "Fast connection from the smartphone to others"  -> Smartphone -> Cloud (slow mode) OR 0 in fast
+    // "Fast connection from others to the smartphone"  -> Cloud -> Smartphone
+
+    std::ostringstream ss;
+    ss.setf(std::ios::fixed); ss.precision(2);
+
+    // Slow side (BLE)
+    ss << "Slow connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCan) << "\n"
+       << "Slow connection from others to the smartphone (time it takes) = " << fmt(msCanToPhone) << "\n";
+
+    // Fast side (WAN). In slow mode: phone<->cloud; in fast mode: cloud->phone only
+    if (mode == "slow") {
+        ss << "Fast connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCloud) << "\n";
+    } else {
+        ss << "Fast connection from the smartphone to others (time it takes) = 0\n";
+    }
+    ss << "Fast connection from others to the smartphone (time it takes) = " << fmt(msCloudToPhone) << "\n\n";
+
+    // Extra lines for cans/cloud as in the professor’s layout
+    // Use the same measured numbers for both cans, or keep separate if you track per-can.
+    ss << "Connection from the can to others (time it takes) = " << (mode=="fast" ? fmt(msCanToCloud) : "0") << "\n"
+       << "Connection from others to the can (time it takes) = 0\n\n"
+       << "Connection from the anotherCan to others (time it takes) = " << (mode=="fast" ? fmt(msCanToCloud) : "0") << "\n"
+       << "Connection from others to the anotherCan (time it takes) = 0\n\n"
+       << "Slow connection from the Cloud to others (time it takes) = 0\n"
+       << "Slow connection from others to the Cloud (time it takes) = 0\n"
+       << "Fast connection from the Cloud to others (time it takes) = 0\n"
+       << "Fast connection from others to the Cloud (time it takes) = 0";
+
+    body->setText(ss.str().c_str());
+}
+
 void Smartphone::handleMessage(cMessage *msg)
 {
     if (msg == mobilityTimer) {
@@ -298,9 +350,21 @@ void Smartphone::handleMessage(cMessage *msg)
        << " isAck=" << (gm->isAck() ? "true" : "false")
        << " gate=" << arrivalGateName << "(" << arrivalGateIndex << ")\n";
 
-    double travelTime = simTime().dbl() - gm->getSentTime();
+    travelTime = simTime().dbl() - gm->getSentTime();
     EV << "[DELAY] " << gm->getName() << " took "
        << (travelTime * 1000) << " ms to arrive.\n";
+    msPhoneToCan = gm->getPrevHopDelay() * 1000;
+    msCanToPhone = travelTime * 1000;
+
+
+    EV << "previous hop delay: " << msPhoneToCan;
+
+    if(gm->getId() == 8 || gm->getId() ==10 ){
+
+        msCloudToPhone = travelTime * 1000;
+        msPhoneToCloud = gm->getPrevHopDelay() * 1000;
+        EV << "triggerd id 8 or 10" << "clouod to hpone" << msCloudToPhone << "phone to cloud" << msPhoneToCloud;
+    }
 
     if (arrivalGateIndex == CAN1) {
         waiting[CAN1] = false;
@@ -329,6 +393,7 @@ void Smartphone::handleMessage(cMessage *msg)
             collect->setSentTime(simTime().dbl());
             EV << "Smartphone sending 7-Collect garbage\n";
             send(collect, "out", CLOUD);
+
         } else if (arrivalGateIndex == CAN2 && gm->getId() == 6 && !collectSent[CAN2]) {
             auto *collect = new GarbageMessage("9-Collect garbage");
             collect->setId(9);
@@ -337,10 +402,12 @@ void Smartphone::handleMessage(cMessage *msg)
             collectSent[CAN2] = true;
             EV << "Smartphone sending 9-Collect garbage\n";
             collect->setSentTime(simTime().dbl());
+
             send(collect, "out", CLOUD);
+
         }
     }
-
+    updateLegend();
     delete gm;
 }
 

@@ -91,12 +91,13 @@ void Can::handleMessage(cMessage *msg)
                 int yesId = isFirstCan ? 3 : 6;
                 int noId = isFirstCan ? 2 : 5;
                 int collectId = isFirstCan ? 7 : 9;
-
+                double inbound = simTime().dbl() - gm->getSentTime();
             if (hasGarbage) {
                 auto *reply = new GarbageMessage(yesName);
                 reply->setId(yesId);
                 reply->setText("YES");
                 reply->setIsAck(false);
+                reply->setPrevHopDelay(inbound);
                 reply->setSentTime(simTime().dbl());
                 send(reply, "out");
 
@@ -105,6 +106,7 @@ void Can::handleMessage(cMessage *msg)
                     collect->setId(collectId);
                     collect->setText("Collect garbage (fog)");
                     collect->setIsAck(false);
+                    collect->setPrevHopDelay(inbound);
                     collect->setSentTime(simTime().dbl());
 
                     send(collect, "outCloud");
@@ -115,6 +117,7 @@ void Can::handleMessage(cMessage *msg)
                 reply->setId(noId);
                 reply->setText("NO");
                 reply->setIsAck(false);
+                reply->setPrevHopDelay(inbound);
                 reply->setSentTime(simTime().dbl());
                 send(reply, "out");
             }

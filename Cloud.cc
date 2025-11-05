@@ -34,7 +34,7 @@ private:
     virtual void handleMessage(cMessage *msg) override {
         auto *gm = check_and_cast<GarbageMessage *>(msg);
         EV << "Cloud received: " << gm->getName() << "\n";
-
+        double inbound = simTime().dbl() - gm->getSentTime();
 
 
         int idx = gm->getArrivalGate()->getIndex();
@@ -46,6 +46,7 @@ private:
                    ok->setId(ackId);
                    ok->setText("OK");
                    ok->setIsAck(true);
+                   ok->setPrevHopDelay(inbound);
                    ok->setSentTime(simTime().dbl());
                    send(ok, "out", idx);
 

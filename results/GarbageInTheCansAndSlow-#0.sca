@@ -1,26 +1,26 @@
 version 3
-run GarbageInTheCansAndFast-0-20251105-16:45:23-68021
-attr configname GarbageInTheCansAndFast
-attr datetime 20251105-16:45:23
-attr datetimef 20251105-164523
-attr experiment GarbageInTheCansAndFast
+run GarbageInTheCansAndSlow-0-20251105-16:50:52-68457
+attr configname GarbageInTheCansAndSlow
+attr datetime 20251105-16:50:52
+attr datetimef 20251105-165052
+attr experiment GarbageInTheCansAndSlow
 attr inifile omnetpp.ini
 attr iterationvars ""
 attr iterationvarsd ""
 attr iterationvarsf ""
 attr measurement ""
 attr network GarbageNetwork
-attr processid 68021
+attr processid 68457
 attr repetition 0
 attr replication #0
 attr resultdir results
 attr runnumber 0
 attr seedset 0
 config image-path ../inet4.5/images
-config *.smartphone.mode "\"fast\""
+config *.smartphone.mode "\"slow\""
 config *.smartphone.mobilityConfig "xmldoc(\"routes.xml\")"
-config *.can1.mode "\"fast\""
-config *.can2.mode "\"fast\""
+config *.can1.mode "\"slow\""
+config *.can2.mode "\"slow\""
 config *.can1.hasGarbage true
 config *.can2.hasGarbage true
 config network GarbageNetwork
@@ -157,19 +157,19 @@ attr mutable ""
 par GarbageNetwork.cloud.out[2].channel per 0
 attr mutable ""
 par GarbageNetwork.smartphone typename "\"Smartphone\""
-par GarbageNetwork.smartphone mode "\"fast\""
+par GarbageNetwork.smartphone mode "\"slow\""
 par GarbageNetwork.smartphone mobilityConfig "<movements>...</movements> at /Users/fredrikgaaso/Desktop/UIO/IN5700/omnetpp-6.2.0/workspace/Group_Project//routes.xml:2"
 par GarbageNetwork.smartphone mobilityUpdateInterval 0.1s
 attr unit s
 par GarbageNetwork.can1 typename "\"Can\""
 par GarbageNetwork.can1 hasGarbage true
-par GarbageNetwork.can1 mode "\"fast\""
+par GarbageNetwork.can1 mode "\"slow\""
 par GarbageNetwork.can1 canId 1
 par GarbageNetwork.can1 x 784
 par GarbageNetwork.can1 y 202
 par GarbageNetwork.can2 typename "\"Can\""
 par GarbageNetwork.can2 hasGarbage true
-par GarbageNetwork.can2 mode "\"fast\""
+par GarbageNetwork.can2 mode "\"slow\""
 par GarbageNetwork.can2 canId 2
 par GarbageNetwork.can2 x 1084
 par GarbageNetwork.can2 y 996

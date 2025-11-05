@@ -3,4 +3,5 @@ message GarbageMessage {
     string text;
     bool isAck;
   	double sentTime;
+  	double prevHopDelay;
 }

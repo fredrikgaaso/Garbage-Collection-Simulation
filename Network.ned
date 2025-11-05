@@ -1,10 +1,8 @@
-//Assuming smartphone to cloud link goes over 5G celluar
 channel Smartphone_Cloud_Link extends ned.DatarateChannel
 {
     delay = 5ms;
     datarate = 340Mbps;
 }
-//Assuming Can
 channel Can_Cloud_Link extends ned.DatarateChannel
 {
     delay = 25ms;

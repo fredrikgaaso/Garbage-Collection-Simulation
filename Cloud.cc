@@ -4,6 +4,9 @@ using namespace omnetpp;
 
 class Cloud : public cSimpleModule {
 private:
+    int sentFastTxt = 0, rcvdFastTxt = 0, sentSlowTxt = 0, rcvdSlowTxt = 0;
+    cTextFigure *statusText = nullptr;
+
     double interactionRadius = 1500.0;
          double posX = 0.0, posY = 0.0;
 
@@ -32,9 +35,20 @@ private:
                   }
 
     virtual void handleMessage(cMessage *msg) override {
+
         auto *gm = check_and_cast<GarbageMessage *>(msg);
         EV << "Cloud received: " << gm->getName() << "\n";
         double inbound = simTime().dbl() - gm->getSentTime();
+
+        if(gm->getFromCloud() == true) {
+            rcvdFastTxt++;
+            updateStatusText();
+
+        }else {
+            rcvdSlowTxt++;
+            updateStatusText();
+
+        }
 
 
         int idx = gm->getArrivalGate()->getIndex();
@@ -46,12 +60,28 @@ private:
                    ok->setId(ackId);
                    ok->setText("OK");
                    ok->setIsAck(true);
+                   ok->setFromCloud(true);
                    ok->setPrevHopDelay(inbound);
                    ok->setSentTime(simTime().dbl());
+                   if(gm->getFromCloud() == true) {
+                       sentFastTxt++;
+                       updateStatusText();
+
+                   }else {
+                       sentSlowTxt++;
+                       updateStatusText();
+
+                   }
                    send(ok, "out", idx);
 
 
         delete gm;
+    }
+    void updateStatusText() {
+        if (!statusText) return;
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "sentFast:%d  rcvdFast:%d sentSlow:%d rcvdSlow:%d", sentFastTxt, rcvdFastTxt, sentSlowTxt, rcvdSlowTxt);
+        statusText->setText(buf);
     }
 };
 Define_Module(Cloud);
@@ -70,6 +100,14 @@ void Cloud::initialize()
 
     createOrUpdateRadiusFigure();
 
+    if (auto *canvas = getParentModule()->getCanvas()) {
+        statusText = new cTextFigure(("status-" + std::string(getName())).c_str());
+        statusText->setFont(cFigure::Font("Arial", 50));
+        statusText->setColor(cFigure::BLUE);
+        statusText->setPosition(cFigure::Point(posX - 400, posY - 150));
+        canvas->addFigure(statusText);
+        updateStatusText();
+    }
 
 
 

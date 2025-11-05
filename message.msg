@@ -4,4 +4,5 @@ message GarbageMessage {
     bool isAck;
   	double sentTime;
   	double prevHopDelay;
+  	bool fromCloud;
 }

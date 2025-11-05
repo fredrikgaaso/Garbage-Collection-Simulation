@@ -32,10 +32,7 @@ class Smartphone : public cSimpleModule
     cMessage *tCan2 = nullptr;
     cMessage *mobilityTimer = nullptr;
 
-    double totalCanToSmartphoneDelay = 0;
-    int countCanToSmartphone = 0;
-    double totalCloudToSmartphoneDelay = 0;
-    int countCloudToSmartphone = 0;
+    double numberOfMessagesSent;
 
     struct Coord {
           double x = 0;
@@ -69,14 +66,26 @@ class Smartphone : public cSimpleModule
     cRectangleFigure *box = nullptr;
     cTextFigure *title = nullptr;
     cTextFigure *body = nullptr;
+    cTextFigure *statusText = nullptr;
+
+    double statusOffsetY = -200.0;
+    double statusOffsetX = -400;
 
     const double X = 2600, Y = 100;
     const double W = 780,  H = 1350;
 
+    int sentTxt = 0, rcvdTxt = 0;
 
-    double msPhoneToCan = -1, msCanToPhone = -1;
+    int sentFastTxt = 0, sentSlowTxt = 0, rcvdFastTxt = 0, rcvdSlowTxt = 0;
+
+
+
+    double msPhoneToCan1 = -1, msCan1ToPhone = -1;
+    double msPhoneToCan2 = -1, msCan2ToPhone = -1;
     double msPhoneToCloud = -1, msCloudToPhone = -1;
-    double msCanToCloud = -1;
+    double msCan1ToCloud = -1, msCloudToCan1 = -1;
+    double msCan2ToCloud = -1, msCloudToCan2 = -1;
+
 
 
     std::string pickBody(const std::string& mode) {
@@ -145,6 +154,8 @@ class Smartphone : public cSimpleModule
     void resumeMobilityIfPaused(int whichCan);
     void updateRadiusFigure(const Coord& coord);
     bool loadCanPosition(const char *moduleName, int whichCan);
+    void finish();
+    void updateStatusText();
 };
 
 Define_Module(Smartphone);
@@ -157,6 +168,7 @@ void Smartphone::initialize()
     tCan2 = new cMessage("tCan2");
 
     updateLegend();
+
 
     cModule *can1 = getParentModule()->getSubmodule("can1");
     double x1 = can1->par("x").doubleValue();
@@ -199,7 +211,7 @@ void Smartphone::initialize()
                    title = new cTextFigure("legendTitle");
                    title->setText(mode == "fast" ? "Fog-based (fast)"
                                    : mode == "slow" ? "Cloud-based (slow)"
-                                   : "No-garbage / movement");
+                                   : "No-garbage");
                    title->setFont(cFigure::Font("Arial", 50));
                    title->setColor(cFigure::BLACK);
                    title->setPosition(cFigure::Point(X + 20, Y + 20));
@@ -212,6 +224,13 @@ void Smartphone::initialize()
                    body->setColor(cFigure::BLACK);
                    body->setPosition(cFigure::Point(X + 20, Y + 70));
                    canvas->addFigure(body);
+
+                   statusText = new cTextFigure(("status-" + std::string(getName())).c_str());
+                        statusText->setFont(cFigure::Font("Arial", 50));
+                        statusText->setColor(cFigure::BLUE);
+                        statusText->setPosition(cFigure::Point(0, 0 ));
+                        canvas->addFigure(statusText);
+                        updateStatusText();
         }
     }
 
@@ -272,6 +291,10 @@ void Smartphone::sendQuery(int whichCan)
     msg->setIsAck(false);
     msg->setSentTime(simTime().dbl());
     send(msg, "out", whichCan);
+    numberOfMessagesSent++;
+    sentSlowTxt++;
+    updateStatusText();
+
 
     tries[whichCan]++;
 }
@@ -295,8 +318,8 @@ void Smartphone::updateLegend() {
     ss.setf(std::ios::fixed); ss.precision(2);
 
     // Slow side (BLE)
-    ss << "Slow connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCan) << "\n"
-       << "Slow connection from others to the smartphone (time it takes) = " << fmt(msCanToPhone) << "\n";
+    ss << "Slow connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCan1 + msPhoneToCan2 * numberOfMessagesSent) << "\n"
+       << "Slow connection from others to the smartphone (time it takes) = " << fmt(msCan1ToPhone + msCan2ToPhone) << "\n";
 
     // Fast side (WAN). In slow mode: phone<->cloud; in fast mode: cloud->phone only
     if (mode == "slow") {
@@ -308,20 +331,23 @@ void Smartphone::updateLegend() {
 
     // Extra lines for cans/cloud as in the professor’s layout
     // Use the same measured numbers for both cans, or keep separate if you track per-can.
-    ss << "Connection from the can to others (time it takes) = " << (mode=="fast" ? fmt(msCanToCloud) : "0") << "\n"
-       << "Connection from others to the can (time it takes) = 0\n\n"
-       << "Connection from the anotherCan to others (time it takes) = " << (mode=="fast" ? fmt(msCanToCloud) : "0") << "\n"
-       << "Connection from others to the anotherCan (time it takes) = 0\n\n"
-       << "Slow connection from the Cloud to others (time it takes) = 0\n"
-       << "Slow connection from others to the Cloud (time it takes) = 0\n"
-       << "Fast connection from the Cloud to others (time it takes) = 0\n"
-       << "Fast connection from others to the Cloud (time it takes) = 0";
+    ss << "Connection from the can to others (time it takes) = " << fmt(msCan1ToCloud + msCan1ToPhone) << "\n"
+       << "Connection from others to the can (time it takes) = " << fmt(msCloudToCan1 + msPhoneToCan1) << "\n\n"
+       << "Connection from the anotherCan to others (time it takes) = " << fmt(msCan2ToCloud + msCan2ToPhone) << "\n"
+       << "Connection from others to the anotherCan (time it takes) = " << fmt(msCloudToCan2 + msPhoneToCan2) <<"\n\n"
+
+
+       << "Slow connection from the Cloud to others (time it takes) = "<< fmt(msCloudToCan1 + msCloudToCan2) << "\n"
+       << "Slow connection from others to the Cloud (time it takes) = " << fmt(msCan1ToCloud + msCan2ToCloud) << "\n"
+       << "Fast connection from the Cloud to others (time it takes) = "<< fmt(msCloudToPhone) <<"\n"
+       << "Fast connection from others to the Cloud (time it takes) = " << fmt(msPhoneToCloud);
 
     body->setText(ss.str().c_str());
 }
 
 void Smartphone::handleMessage(cMessage *msg)
 {
+
     if (msg == mobilityTimer) {
         advanceMobility();
         return;
@@ -341,6 +367,7 @@ void Smartphone::handleMessage(cMessage *msg)
     }
 
     GarbageMessage *gm = check_and_cast<GarbageMessage *>(msg);
+
     const cGate *arrivalGate = gm->getArrivalGate();
     int arrivalGateIndex = arrivalGate ? arrivalGate->getIndex() : -1;
     const char *arrivalGateName = arrivalGate ? arrivalGate->getFullName() : "<none>";
@@ -351,20 +378,70 @@ void Smartphone::handleMessage(cMessage *msg)
        << " gate=" << arrivalGateName << "(" << arrivalGateIndex << ")\n";
 
     travelTime = simTime().dbl() - gm->getSentTime();
+    rcvdTxt++;
+    updateStatusText();
+
     EV << "[DELAY] " << gm->getName() << " took "
        << (travelTime * 1000) << " ms to arrive.\n";
-    msPhoneToCan = gm->getPrevHopDelay() * 1000;
-    msCanToPhone = travelTime * 1000;
+    if (arrivalGateIndex == CAN1) {
+          msPhoneToCan1 += gm->getPrevHopDelay() * 1000;
+          msCan1ToPhone += travelTime * 1000;
+          EV << "[DELAY] Can->Phone = " << msCan1ToPhone
+             << " ms | Phone->Can = " << msPhoneToCan1 << " ms\n";
+      } else if ( arrivalGateIndex == CAN2){
+          msPhoneToCan2 += gm->getPrevHopDelay() * 1000;
+          msCan2ToPhone += travelTime * 1000;
+          EV << "[DELAY] Can->Phone = " << msCan2ToPhone
+                    << " ms | Phone->Can = " << msPhoneToCan2 << " ms\n";
+      }
 
 
-    EV << "previous hop delay: " << msPhoneToCan;
+    EV << "previous hop delay: " << msPhoneToCan1;
+    switch (gm->getId()) {
+        case 2:
+        case 3:
+        case 5:
+        case 6:
+            if (gm->getFromCloud()) {
+                if (gm->getId() == 3) {
+                    msCan1ToCloud += gm->getPrevHopDelay() * 1000;
+                    msCloudToCan1 += travelTime * 1000;
+                    EV << "Triggered ID 3 (Can1 <-> Cloud)"
+                       << " | Can→Cloud: " << msCan1ToCloud
+                       << " | Cloud→Can: " << msCloudToCan1 << "\n";
+                } else { // id == 6
+                    msCan2ToCloud += gm->getPrevHopDelay() * 1000;
+                    msCloudToCan2 += travelTime * 1000;
+                    EV << "Triggered ID 6 (Can2 <-> Cloud)"
+                       << " | Can→Cloud: " << msCan2ToCloud
+                       << " | Cloud→Can: " << msCloudToCan2 << "\n";
+                }
+                rcvdSlowTxt++;
+                updateStatusText();
+            } else {
+                rcvdSlowTxt++;
+                updateStatusText();
+            }
+            break;
 
-    if(gm->getId() == 8 || gm->getId() ==10 ){
+        case 8:
+        case 10:
+            msCloudToPhone += travelTime * 1000;
+            msPhoneToCloud += gm->getPrevHopDelay() * 1000;
+            rcvdFastTxt++;
+            updateStatusText();
+            EV << "Triggered ID " << gm->getId()
+               << " (Cloud <-> Phone)"
+               << " | Cloud→Phone: " << msCloudToPhone
+               << " | Phone→Cloud: " << msPhoneToCloud << "\n";
+            break;
 
-        msCloudToPhone = travelTime * 1000;
-        msPhoneToCloud = gm->getPrevHopDelay() * 1000;
-        EV << "triggerd id 8 or 10" << "clouod to hpone" << msCloudToPhone << "phone to cloud" << msPhoneToCloud;
+
+        default:
+            break;
     }
+
+
 
     if (arrivalGateIndex == CAN1) {
         waiting[CAN1] = false;
@@ -387,27 +464,35 @@ void Smartphone::handleMessage(cMessage *msg)
         if (arrivalGateIndex == CAN1 && gm->getId() == 3 && !collectSent[CAN1]) {
             auto *collect = new GarbageMessage("7-Collect garbage");
             collect->setId(7);
-            collect->setText("Collect garbage from can1");
+            collect->setText("Collect garbage");
             collect->setIsAck(false);
             collectSent[CAN1] = true;
             collect->setSentTime(simTime().dbl());
+            collect->setFromCloud(true);
             EV << "Smartphone sending 7-Collect garbage\n";
             send(collect, "out", CLOUD);
+            sentFastTxt++;
+            updateStatusText();
+
+
 
         } else if (arrivalGateIndex == CAN2 && gm->getId() == 6 && !collectSent[CAN2]) {
             auto *collect = new GarbageMessage("9-Collect garbage");
             collect->setId(9);
-            collect->setText("Collect garbage from can2");
+            collect->setText("Collect garbage");
             collect->setIsAck(false);
             collectSent[CAN2] = true;
             EV << "Smartphone sending 9-Collect garbage\n";
+            collect->setFromCloud(true);
             collect->setSentTime(simTime().dbl());
 
             send(collect, "out", CLOUD);
+            sentFastTxt++;
+            updateStatusText();
+
 
         }
     }
-    updateLegend();
     delete gm;
 }
 
@@ -681,6 +766,9 @@ void Smartphone::setDisplayPosition(const Coord& coord)
     getDisplayString().setTagArg("p", 0, coord.x);
     getDisplayString().setTagArg("p", 1, coord.y);
     updateRadiusFigure(coord);
+    if (statusText) {
+           statusText->setPosition(cFigure::Point(coord.x + statusOffsetX, coord.y + statusOffsetY));
+       }
 }
 
 void Smartphone::updateRadiusFigure(const Coord& coord)
@@ -694,4 +782,17 @@ void Smartphone::updateRadiusFigure(const Coord& coord)
                               diameter,
                               diameter);
     radiusFigure->setBounds(bounds);
+}
+
+void Smartphone::updateStatusText() {
+    if (!statusText) return;
+       char buf[64];
+       std::snprintf(buf, sizeof(buf), "sentFast:%d  rcvdFast:%d sentSlow:%d rcvdSlow:%d", sentFastTxt, rcvdFastTxt, sentSlowTxt, rcvdSlowTxt);
+       statusText->setText(buf);
+}
+void Smartphone::finish(){
+    EV << numberOfMessagesSent;
+    updateLegend();
+
+
 }

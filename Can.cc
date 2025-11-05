@@ -6,6 +6,9 @@ using namespace omnetpp;
 class Can : public cSimpleModule
 {
   private:
+    int sentFastTxt = 0, rcvdFastTxt = 0, sentSlowTxt = 0, rcvdSlowTxt = 0;
+    cTextFigure *statusText = nullptr;
+
     bool hasGarbage = false;
     int lostCount = 0;
     std::string mode;
@@ -37,6 +40,12 @@ class Can : public cSimpleModule
                 cFigure::Rectangle bounds(posX - r, posY - r, 2*r, 2*r);
                 radiusFigure->setBounds(bounds);
             }
+    void updateStatusText() {
+        if (!statusText) return;
+        char buf[64];
+        std::snprintf(buf, sizeof(buf), "sentFast:%d rcvdFast:%d sentSlow:%d rcvdSlow:%d numberOfLostMsgs:%d", sentFastTxt, rcvdFastTxt, sentSlowTxt, rcvdSlowTxt, lostCount);
+        statusText->setText(buf);
+    }
 };
 
 Define_Module(Can);
@@ -63,7 +72,14 @@ void Can::initialize()
        << " mode=" << mode << "\n";
 
     createOrUpdateRadiusFigure();
-
+    if (auto *canvas = getParentModule()->getCanvas()) {
+        statusText = new cTextFigure(("status-" + std::string(getName())).c_str());
+        statusText->setFont(cFigure::Font("Arial", 50));
+        statusText->setColor(cFigure::BLUE);
+        statusText->setPosition(cFigure::Point(posX - 400, posY - 150));
+        canvas->addFigure(statusText);
+        updateStatusText();
+    }
 
 
 
@@ -71,16 +87,26 @@ void Can::initialize()
 
 void Can::handleMessage(cMessage *msg)
 {
+
     GarbageMessage *gm = check_and_cast<GarbageMessage *>(msg);
     EV << "Can received: " << gm->getName() << "\n";
 
     if ((gm->getId() == 1 || gm->getId() == 4) && lostCount < 3) {
         lostCount++;
+        updateStatusText();
         EV << "Simulated loss (" << lostCount << ")\n";
         bubble("message lost");
         delete gm;
         return;
+    }else if (gm->getFromCloud() == true) {
+        rcvdFastTxt++;
+        updateStatusText();
+    } else {
+        rcvdSlowTxt++;
+          updateStatusText();
     }
+
+
     bool smartphoneQuery = (gm->getId() == 1 || gm->getId() == 4);
 
     if (smartphoneQuery) {
@@ -93,12 +119,18 @@ void Can::handleMessage(cMessage *msg)
                 int collectId = isFirstCan ? 7 : 9;
                 double inbound = simTime().dbl() - gm->getSentTime();
             if (hasGarbage) {
+                EV << "mode: "<< mode;
                 auto *reply = new GarbageMessage(yesName);
                 reply->setId(yesId);
                 reply->setText("YES");
                 reply->setIsAck(false);
+               if(mode == "fast") {
+                   reply->setFromCloud(true);
+               }
                 reply->setPrevHopDelay(inbound);
                 reply->setSentTime(simTime().dbl());
+                sentSlowTxt++;
+                updateStatusText();
                 send(reply, "out");
 
                 if (mode == "fast") {
@@ -106,9 +138,11 @@ void Can::handleMessage(cMessage *msg)
                     collect->setId(collectId);
                     collect->setText("Collect garbage (fog)");
                     collect->setIsAck(false);
+
                     collect->setPrevHopDelay(inbound);
                     collect->setSentTime(simTime().dbl());
-
+                    sentFastTxt++;
+                    updateStatusText();
                     send(collect, "outCloud");
                 }
 
@@ -119,6 +153,8 @@ void Can::handleMessage(cMessage *msg)
                 reply->setIsAck(false);
                 reply->setPrevHopDelay(inbound);
                 reply->setSentTime(simTime().dbl());
+                sentSlowTxt++;
+                updateStatusText();
                 send(reply, "out");
             }
         }

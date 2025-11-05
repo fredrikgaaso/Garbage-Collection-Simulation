@@ -1,8 +1,16 @@
 #include <omnetpp.h>
 #include <string>
+#include <vector>
+#include <cmath>
+#include <omnetpp/sim_std_m.h>
+#include <cstdlib>
 #include "message_m.h"
 
 using namespace omnetpp;
+
+namespace {
+constexpr double PI = 3.14159265358979323846;
+}
 
 enum Peer { CAN1 = 0, CAN2 = 1, CLOUD = 2 };
 
@@ -17,15 +25,118 @@ class Smartphone : public cSimpleModule
     bool waiting[2] = {true,true};
     bool yes[2] = {false,false};
 
+
     cMessage *tCan1 = nullptr;
     cMessage *tCan2 = nullptr;
+    cMessage *mobilityTimer = nullptr;
+
+    double totalCanToSmartphoneDelay = 0;
+    int countCanToSmartphone = 0;
+    double totalCloudToSmartphoneDelay = 0;
+    int countCloudToSmartphone = 0;
+
+    struct Coord {
+          double x = 0;
+          double y = 0;
+      };
+
+      struct Segment {
+          Coord start;
+          Coord end;
+          simtime_t duration;
+      };
+    simtime_t mobilityUpdateInterval = 0.1;
+    std::vector<Segment> mobilitySegments;
+    size_t currentSegmentIndex = 0;
+    simtime_t segmentStartTime = SIMTIME_ZERO;
+    bool mobilityActive = false;
+    Coord startPosition;
+    bool hasStartPosition = false;
+    Coord currentPosition;
+    cOvalFigure *radiusFigure = nullptr;
+    Coord canPositions[2];
+    bool canActivationScheduled[2] = {false, false};
+    bool interactionDone[2] = {false, false};
+    bool collectSent[2] = {false, false};
+    bool canPositionValid[2] = {false, false};
+    double interactionRadius = 400.0;
+    bool mobilityPaused = false;
+    int pauseForCan = -1;
+    simtime_t pauseStartTime = SIMTIME_ZERO;
+
+    cRectangleFigure *box = nullptr;
+    cTextFigure *title = nullptr;
+    cTextFigure *body = nullptr;
+
+    const double X = 2600, Y = 100;
+    const double W = 780,  H = 1350;
+
+
+    std::string pickBody(const std::string& mode) {
+        if (mode == "fast") {
+            return
+                    "Slow connection from the smartphone to others (time it takes) = 0 \n"
+                    "Slow connection from others to the smartphone (time it takes) = 0\n"
+                    "Fast connection from the smartphone to others (time it takes) = \n"
+                    "Fast connection from others to the smartphone (time it takes) = \n\n"
+                    "Connection from the can to others (time it takes) =\n"
+                    "Connection from others to the can (time it takes) =\n\n"
+                    "Connection from the anotherCan to others (time it takes) =\n"
+                    "Connection from others to the anotherCan (time it takes) =\n\n"
+                    "Slow connection from the Cloud to others (time it takes) = 0\n"
+                    "Slow connection from others to the Cloud (time it takes) = 0\n"
+                    "Fast connection from the Cloud to others (time it takes) =\n"
+                    "Fast connection from others to the Cloud (time it takes) =";
+
+        } else if (mode == "slow") {
+            return
+                    "Slow connection from the smartphone to others (time it takes) =\n"
+                    "Slow connection from others to the smartphone (time it takes) =\n"
+                    "Fast connection from the smartphone to others (time it takes) = 0\n"
+                    "Fast connection from others to the smartphone (time it takes) = 0\n"
+                    "Connection from the can to others (time it takes) =\n"
+                    "Connection from others to the can (time it takes) =\n\n"
+                    "Connection from the anotherCan to others (time it takes) =\n"
+                    "Connection from others to the anotherCan (time it takes) =\n\n"
+                    "Slow connection from the Cloud to others (time it takes) =\n"
+                    "Slow connection from others to the Cloud (time it takes) =\n"
+                    "Fast connection from the Cloud to others (time it takes) =0\n"
+                    "Fast connection from others to the Cloud (time it takes) =0";
+        } else { // "none"
+            return
+                    "Slow connection from the smartphone to others (time it takes) =\n"
+                    "Slow connection from others to the smartphone (time it takes) =\n"
+                    "Fast connection from the smartphone to others (time it takes) =\n"
+                    "Fast connection from others to the smartphone (time it takes) =\n\n"
+                    "Connection from the can to others (time it takes) =\n"
+                    "Connection from others to the can (time it takes) =\n\n"
+                    "Connection from the anotherCan to others (time it takes) =\n"
+                    "Connection from others to the anotherCan (time it takes) =\n\n"
+                    "Slow connection from the Cloud to others (time it takes) = 0\n"
+                    "Slow connection from others to the Cloud (time it takes) = 0\n"
+                    "Fast connection from the Cloud to others (time it takes) = 0\n"
+                    "Fast connection from others to the Cloud (time it takes) = 0";
+        }
+      }
+
 
   protected:
+    virtual ~Smartphone() override;
     virtual void initialize() override;
     virtual void handleMessage(cMessage *msg) override;
 
-    void startPolling();
     void sendQuery(int whichCan);
+    void setupMobility();
+    void parseMobilityDefinition(cXMLElement *root);
+    void buildDefaultRoute();
+    void advanceMobility();
+    void setDisplayPosition(const Coord& coord);
+    void activateCan(int whichCan);
+    void maybeTriggerCanActivation();
+    double distanceTo(const Coord& a, const Coord& b) const;
+    void resumeMobilityIfPaused(int whichCan);
+    void updateRadiusFigure(const Coord& coord);
+    bool loadCanPosition(const char *moduleName, int whichCan);
 };
 
 Define_Module(Smartphone);
@@ -33,33 +144,125 @@ Define_Module(Smartphone);
 void Smartphone::initialize()
 {
     mode = par("mode").stdstringValue();
-    EV << "Smartphone mode: " << mode << "\n";
 
     tCan1 = new cMessage("tCan1");
     tCan2 = new cMessage("tCan2");
 
-    startPolling();
+
+
+    cModule *can1 = getParentModule()->getSubmodule("can1");
+    double x1 = can1->par("x").doubleValue();
+    double y1 = can1->par("y").doubleValue();
+
+    cModule *can2 = getParentModule()->getSubmodule("can2");
+    double x2 = can2->par("x").doubleValue();
+    double y2 = can2->par("y").doubleValue();
+
+    tries[CAN1] = tries[CAN2] = 0;
+    waiting[CAN1] = waiting[CAN2] = false;
+    yes[CAN1] = yes[CAN2] = false;
+    interactionDone[CAN1] = interactionDone[CAN2] = false;
+    canActivationScheduled[CAN1] = canActivationScheduled[CAN2] = false;
+    collectSent[CAN1] = collectSent[CAN2] = false;
+
+    bool fallbackActivation[2] = {false, false};
+    // fetch can display positions to align interaction checkpoints
+    if (!loadCanPosition("can1", CAN1)) {
+        fallbackActivation[CAN1] = true;
+    }
+    if (!loadCanPosition("can2", CAN2)) {
+        fallbackActivation[CAN2] = true;
+    }
+
+    mobilityUpdateInterval = par("mobilityUpdateInterval").doubleValue();
+
+    if (auto *parent = getParentModule()) {
+        if (auto *canvas = parent->getCanvas()) {
+            radiusFigure = new cOvalFigure("communicationRadius");
+            radiusFigure->setLineColor(cFigure::BLUE);
+            radiusFigure->setLineWidth(1);
+            radiusFigure->setFillColor(cFigure::BLUE);
+            radiusFigure->setFillOpacity(0.0);
+            canvas->addFigure(radiusFigure);
+
+
+
+                   // title
+                   title = new cTextFigure("legendTitle");
+                   title->setText(mode == "fast" ? "Fog-based (fast)"
+                                   : mode == "slow" ? "Cloud-based (slow)"
+                                   : "No-garbage / movement");
+                   title->setFont(cFigure::Font("Arial", 50));
+                   title->setColor(cFigure::BLACK);
+                   title->setPosition(cFigure::Point(X + 20, Y + 20));
+                   canvas->addFigure(title);
+
+                   // body text (multi-line)
+                   body = new cTextFigure("legendBody");
+                   body->setText(pickBody(mode).c_str());
+                   body->setFont(cFigure::Font("Arial", 50));
+                   body->setColor(cFigure::BLACK);
+                   body->setPosition(cFigure::Point(X + 20, Y + 70));
+                   canvas->addFigure(body);
+        }
+    }
+
+    setupMobility();
+
+    // ensure can positions are known and valid (matching Network.ned layout)
+    canPositions[CAN1].x = x1;
+    canPositions[CAN1].y = y1;
+    canPositionValid[CAN1] = true;
+    canPositions[CAN2].x = x2;
+    canPositions[CAN2].y = y2;
+    canPositionValid[CAN2] = true;
+
+        maybeTriggerCanActivation();
+
 }
 
-void Smartphone::startPolling()
+bool Smartphone::loadCanPosition(const char *moduleName, int whichCan)
 {
-    tries[CAN1] = tries[CAN2] = 0;
-    waiting[CAN1] = waiting[CAN2];
-    yes[CAN1] = yes[CAN2] = false;
+    if (!moduleName || whichCan < CAN1 || whichCan > CAN2)
+        return false;
 
-    scheduleAt(simTime() + 0.1, tCan1);
-    scheduleAt(simTime() + 0.1, tCan2);
+    cModule *parent = getParentModule();
+    if (!parent)
+        return false;
+
+    cModule *target = parent->getSubmodule(moduleName);
+    if (!target)
+        return false;
+
+    const char *x = target->getDisplayString().getTagArg("p", 0);
+    const char *y = target->getDisplayString().getTagArg("p", 1);
+    if (!(x && *x) || !(y && *y))
+        return false;
+
+    canPositions[whichCan].x = atof(x);
+    canPositions[whichCan].y = atof(y);
+    canPositionValid[whichCan] = true;
+    return true;
 }
 
 void Smartphone::sendQuery(int whichCan)
 {
-    if (!waiting[whichCan]) return;
-    if (tries[whichCan] >= MAX_TRIES) return;
+
+
+    if (!waiting[whichCan]) {
+        EV << "[DEBUG] sendQuery REJECTED: not waiting\n";
+        return;
+    }
+    if (tries[whichCan] >= MAX_TRIES) {
+        EV << "[DEBUG] sendQuery REJECTED: max tries reached\n";
+        return;
+    }
 
     auto *msg = new GarbageMessage(whichCan == CAN1 ? "1-Is the can full?" : "4-Is the can full?");
     msg->setId(whichCan == CAN1 ? 1 : 4);
     msg->setText("Is the can full?");
     msg->setIsAck(false);
+    msg->setSentTime(simTime().dbl());
     send(msg, "out", whichCan);
 
     tries[whichCan]++;
@@ -67,6 +270,11 @@ void Smartphone::sendQuery(int whichCan)
 
 void Smartphone::handleMessage(cMessage *msg)
 {
+    if (msg == mobilityTimer) {
+        advanceMobility();
+        return;
+    }
+
     if (msg == tCan1) {
         sendQuery(CAN1);
         if (waiting[CAN1] && tries[CAN1] < MAX_TRIES)
@@ -81,26 +289,342 @@ void Smartphone::handleMessage(cMessage *msg)
     }
 
     GarbageMessage *gm = check_and_cast<GarbageMessage *>(msg);
-    EV << "Smartphone received: " << gm->getName()
+    const cGate *arrivalGate = gm->getArrivalGate();
+    int arrivalGateIndex = arrivalGate ? arrivalGate->getIndex() : -1;
+    const char *arrivalGateName = arrivalGate ? arrivalGate->getFullName() : "<none>";
+
+    EV << "[SMARTPHONE MSG] " << gm->getName()
        << " id=" << gm->getId()
-       << " isAck=" << (gm->isAck() ? "true" : "false") << "\n";
+       << " isAck=" << (gm->isAck() ? "true" : "false")
+       << " gate=" << arrivalGateName << "(" << arrivalGateIndex << ")\n";
 
+    double travelTime = simTime().dbl() - gm->getSentTime();
+    EV << "[DELAY] " << gm->getName() << " took "
+       << (travelTime * 1000) << " ms to arrive.\n";
 
-    if (gm->getId() == 2 || gm->getId() == 3) {
+    if (arrivalGateIndex == CAN1) {
         waiting[CAN1] = false;
         yes[CAN1] = (gm->getId() == 3);
-    } else if (gm->getId() == 5 || gm->getId() == 6) {
+        interactionDone[CAN1] = true;
+        if (tCan1->isScheduled())
+            cancelEvent(tCan1);
+        resumeMobilityIfPaused(CAN1);
+    } else if (arrivalGateIndex == CAN2) {
         waiting[CAN2] = false;
         yes[CAN2] = (gm->getId() == 6);
+        interactionDone[CAN2] = true;
+        if (tCan2->isScheduled())
+            cancelEvent(tCan2);
+        resumeMobilityIfPaused(CAN2);
     }
 
-    if (mode == "slow" && (yes[CAN1] || yes[CAN2])) {
-        auto *collect = new GarbageMessage("7-Collect garbage");
-        collect->setId(7);
-        collect->setText("Collect garbage");
-        collect->setIsAck(false);
-        send(collect, "out", CLOUD);
+    if (mode == "slow") {
+        EV << "[SMARTPHONE COLLECT] flags can1=" << collectSent[CAN1] << " can2=" << collectSent[CAN2] << "\n";
+        if (arrivalGateIndex == CAN1 && gm->getId() == 3 && !collectSent[CAN1]) {
+            auto *collect = new GarbageMessage("7-Collect garbage");
+            collect->setId(7);
+            collect->setText("Collect garbage from can1");
+            collect->setIsAck(false);
+            collectSent[CAN1] = true;
+            collect->setSentTime(simTime().dbl());
+            EV << "Smartphone sending 7-Collect garbage\n";
+            send(collect, "out", CLOUD);
+        } else if (arrivalGateIndex == CAN2 && gm->getId() == 6 && !collectSent[CAN2]) {
+            auto *collect = new GarbageMessage("9-Collect garbage");
+            collect->setId(9);
+            collect->setText("Collect garbage from can2");
+            collect->setIsAck(false);
+            collectSent[CAN2] = true;
+            EV << "Smartphone sending 9-Collect garbage\n";
+            collect->setSentTime(simTime().dbl());
+            send(collect, "out", CLOUD);
+        }
     }
 
     delete gm;
+}
+
+Smartphone::~Smartphone()
+{
+    if (tCan1)
+        cancelAndDelete(tCan1);
+    if (tCan2)
+        cancelAndDelete(tCan2);
+    if (mobilityTimer)
+        cancelAndDelete(mobilityTimer);
+    if (radiusFigure) {
+        if (auto *parentFigure = radiusFigure->getParentFigure())
+            parentFigure->removeFigure(radiusFigure);
+        delete radiusFigure;
+        radiusFigure = nullptr;
+    }
+}
+
+void Smartphone::setupMobility()
+{
+    cXMLElement *config = par("mobilityConfig").xmlValue();
+    mobilitySegments.clear();
+    hasStartPosition = false;
+
+    if (config) {
+        parseMobilityDefinition(config);
+    }
+
+    if (!hasStartPosition || mobilitySegments.empty()) {
+        EV_WARN << "Mobility script missing or empty, falling back to built-in route\n";
+        buildDefaultRoute();
+    }
+
+    if (hasStartPosition)
+        setDisplayPosition(startPosition);
+
+    if (mobilitySegments.empty()) {
+        EV_WARN << "No mobility segments defined; smartphone will remain stationary.\n";
+        return;
+    }
+
+    if (!mobilityTimer)
+        mobilityTimer = new cMessage("mobilityTimer");
+    else
+        cancelEvent(mobilityTimer);
+
+    mobilityActive = true;
+    currentSegmentIndex = 0;
+    segmentStartTime = simTime();
+
+    if (mobilityActive)
+        scheduleAt(simTime(), mobilityTimer);
+}
+
+void Smartphone::parseMobilityDefinition(cXMLElement *root)
+{
+    Coord currentPosition;
+    double currentAngleDeg = 0;
+    double currentSpeed = 0;
+    bool positionInitialized = false;
+
+    for (cXMLElement *movement = root->getFirstChild(); movement; movement = movement->getNextSibling()) {
+        if (strcmp(movement->getTagName(), "movement") != 0)
+            continue;
+
+        for (cXMLElement *cmd = movement->getFirstChild(); cmd; cmd = cmd->getNextSibling()) {
+            const char *tag = cmd->getTagName();
+            if (strcmp(tag, "set") == 0) {
+                if (const char *xAttr = cmd->getAttribute("x"))
+                    currentPosition.x = atof(xAttr);
+                if (const char *yAttr = cmd->getAttribute("y"))
+                    currentPosition.y = atof(yAttr);
+                if (const char *angleAttr = cmd->getAttribute("angle"))
+                    currentAngleDeg = atof(angleAttr);
+                if (const char *speedAttr = cmd->getAttribute("speed"))
+                    currentSpeed = atof(speedAttr);
+
+                if (!positionInitialized) {
+                    startPosition = currentPosition;
+                    hasStartPosition = true;
+                    positionInitialized = true;
+                }
+            } else if (strcmp(tag, "turn") == 0) {
+                if (const char *angleAttr = cmd->getAttribute("angle")) {
+                    currentAngleDeg = std::fmod(currentAngleDeg + atof(angleAttr), 360.0);
+                    if (currentAngleDeg < 0)
+                        currentAngleDeg += 360.0;
+                }
+            } else if (strcmp(tag, "forward") == 0) {
+                if (!positionInitialized || currentSpeed <= 0)
+                    continue;
+
+                const char *distAttr = cmd->getAttribute("d");
+                if (!distAttr)
+                    continue;
+
+                double distance = atof(distAttr);
+                Coord start = currentPosition;
+                double radians = currentAngleDeg * PI / 180.0;
+                currentPosition.x += std::cos(radians) * distance;
+                currentPosition.y += std::sin(radians) * distance;
+                simtime_t duration = currentSpeed > 0 ? SimTime(distance / currentSpeed) : SimTime();
+
+                Segment seg;
+                seg.start = start;
+                seg.end = currentPosition;
+                seg.duration = duration;
+                mobilitySegments.push_back(seg);
+            }
+        }
+    }
+
+    if (!hasStartPosition && positionInitialized) {
+        startPosition = currentPosition;
+        hasStartPosition = true;
+    }
+}
+
+void Smartphone::buildDefaultRoute()
+{
+    mobilitySegments.clear();
+
+    startPosition = {2190.0, 420.0};
+    hasStartPosition = true;
+
+    double speed = 340.0;
+
+    auto addSegment = [&](const Coord& from, const Coord& to) {
+        Segment seg;
+        seg.start = from;
+        seg.end = to;
+        double dist = distanceTo(from, to);
+        seg.duration = speed > 0 ? SimTime(dist / speed) : SimTime();
+        mobilitySegments.push_back(seg);
+    };
+
+    Coord p1 = startPosition;
+    Coord p2 = {540.0, 420.0};
+    Coord p3 = {540.0, 1280.0};
+    Coord p4 = {2190.0, 1280.0};
+
+    addSegment(p1, p2);
+    addSegment(p2, p3);
+    addSegment(p3, p4);
+}
+
+void Smartphone::advanceMobility()
+{
+    if (!mobilityActive) {
+        return;
+    }
+
+    if (mobilityPaused) {
+        return;
+    }
+
+    if (currentSegmentIndex >= mobilitySegments.size()) {
+        mobilityActive = false;
+        return;
+    }
+
+    Segment &segment = mobilitySegments[currentSegmentIndex];
+    simtime_t elapsed = simTime() - segmentStartTime;
+
+    if (segment.duration <= SIMTIME_ZERO || elapsed >= segment.duration) {
+        setDisplayPosition(segment.end);
+        EV << "Movement reached segment end (" << segment.end.x << "," << segment.end.y << ")\n";
+        currentSegmentIndex++;
+        segmentStartTime = simTime();
+
+        if (currentSegmentIndex >= mobilitySegments.size()) {
+            mobilityActive = false;
+        }
+    } else {
+        double fraction = segment.duration.dbl() == 0 ? 1.0 : elapsed.dbl() / segment.duration.dbl();
+        Coord interpolated;
+        interpolated.x = segment.start.x + (segment.end.x - segment.start.x) * fraction;
+        interpolated.y = segment.start.y + (segment.end.y - segment.start.y) * fraction;
+        setDisplayPosition(interpolated);
+    }
+
+    maybeTriggerCanActivation();
+
+    if (mobilityActive && !mobilityPaused) {
+        scheduleAt(simTime() + mobilityUpdateInterval, mobilityTimer);
+    }
+}
+
+void Smartphone::activateCan(int whichCan)
+{
+    EV << "[DEBUG] activateCan CALLED: whichCan=" << whichCan
+       << " interactionDone=" << interactionDone[whichCan]
+       << " waiting=" << waiting[whichCan] << " at t=" << simTime() << "\n";
+
+    if (whichCan < 0 || whichCan > 1) {
+        EV << "[DEBUG] activateCan REJECTED: invalid whichCan\n";
+        return;
+    }
+    if (interactionDone[whichCan] || waiting[whichCan]) {
+        EV << "[DEBUG] activateCan REJECTED: already done or waiting\n";
+        return;
+    }
+
+    EV << "[DEBUG] activateCan PROCEEDING: whichCan=" << whichCan << " at t=" << simTime() << "\n";
+
+    cMessage *timer = whichCan == CAN1 ? tCan1 : tCan2;
+    waiting[whichCan] = true;
+    tries[whichCan] = 0;
+    yes[whichCan] = false;
+    canActivationScheduled[whichCan] = true;
+
+    if (!timer->isScheduled()) {
+        scheduleAt(simTime() + 0.1, timer);
+    }
+
+    if (mobilityActive && (!mobilityPaused || pauseForCan == -1)) {
+        mobilityPaused = true;
+        pauseForCan = whichCan;
+        pauseStartTime = simTime();
+    }
+}
+
+void Smartphone::maybeTriggerCanActivation()
+{
+    for (int i = 0; i < 2; ++i) {
+        if (!canPositionValid[i])
+            continue;
+        double d = distanceTo(currentPosition, canPositions[i]);
+        if (interactionDone[i] || canActivationScheduled[i] || !canPositionValid[i])
+            continue;
+
+        if (i == CAN2 && !interactionDone[CAN1])
+            continue;
+
+        if (d <= interactionRadius) {
+            canActivationScheduled[i] = true;
+            EV << "[DEBUG] within radius: activating can" << (i+1) << " distance=" << d << "\n";
+            activateCan(i);
+        }
+    }
+}
+
+double Smartphone::distanceTo(const Coord& a, const Coord& b) const
+{
+    double dx = a.x - b.x;
+    double dy = a.y - b.y;
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+void Smartphone::resumeMobilityIfPaused(int whichCan)
+{
+    if (!mobilityPaused || pauseForCan != whichCan)
+        return;
+
+    simtime_t pauseDuration = simTime() - pauseStartTime;
+    pauseStartTime = SIMTIME_ZERO;
+    mobilityPaused = false;
+    pauseForCan = -1;
+
+    segmentStartTime += pauseDuration;
+
+    if (mobilityActive && mobilityTimer && !mobilityTimer->isScheduled()) {
+        scheduleAt(simTime() + mobilityUpdateInterval, mobilityTimer);
+    }
+}
+
+void Smartphone::setDisplayPosition(const Coord& coord)
+{
+    currentPosition = coord;
+    getDisplayString().setTagArg("p", 0, coord.x);
+    getDisplayString().setTagArg("p", 1, coord.y);
+    updateRadiusFigure(coord);
+}
+
+void Smartphone::updateRadiusFigure(const Coord& coord)
+{
+    if (!radiusFigure)
+        return;
+
+    double diameter = interactionRadius * 2.0;
+    cFigure::Rectangle bounds(coord.x - interactionRadius,
+                              coord.y - interactionRadius,
+                              diameter,
+                              diameter);
+    radiusFigure->setBounds(bounds);
 }

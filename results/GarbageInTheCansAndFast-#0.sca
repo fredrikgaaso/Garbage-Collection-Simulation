@@ -1,8 +1,8 @@
 version 3
-run GarbageInTheCansAndFast-0-20251014-12:13:47-64199
+run GarbageInTheCansAndFast-0-20251104-20:45:16-59678
 attr configname GarbageInTheCansAndFast
-attr datetime 20251014-12:13:47
-attr datetimef 20251014-121347
+attr datetime 20251104-20:45:16
+attr datetimef 20251104-204516
 attr experiment GarbageInTheCansAndFast
 attr inifile omnetpp.ini
 attr iterationvars ""
@@ -10,12 +10,13 @@ attr iterationvarsd ""
 attr iterationvarsf ""
 attr measurement ""
 attr network GarbageNetwork
-attr processid 64199
+attr processid 59678
 attr repetition 0
 attr replication #0
 attr resultdir results
 attr runnumber 0
 attr seedset 0
+config image-path ../inet4.5/images
 config *.smartphone.mode "\"fast\""
 config *.smartphone.mobilityConfig "xmldoc(\"routes.xml\")"
 config *.can1.mode "\"fast\""
@@ -25,130 +26,130 @@ config *.can2.hasGarbage true
 config network GarbageNetwork
 config sim-time-limit 100s
 
-par GarbageNetwork.smartphone.out[0].channel typename "\"SlowLink\""
+par GarbageNetwork.smartphone.out[0].channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.smartphone.out[0].channel disabled false
 attr mutable ""
 par GarbageNetwork.smartphone.out[0].channel delay 0.1s
 attr mutable ""
 attr unit s
-par GarbageNetwork.smartphone.out[0].channel datarate 1e+06bps
+par GarbageNetwork.smartphone.out[0].channel datarate 2.1e+06bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.smartphone.out[0].channel ber 0
 attr mutable ""
 par GarbageNetwork.smartphone.out[0].channel per 0
 attr mutable ""
-par GarbageNetwork.can1.out.channel typename "\"SlowLink\""
+par GarbageNetwork.can1.out.channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.can1.out.channel disabled false
 attr mutable ""
 par GarbageNetwork.can1.out.channel delay 0.1s
 attr mutable ""
 attr unit s
-par GarbageNetwork.can1.out.channel datarate 1e+06bps
+par GarbageNetwork.can1.out.channel datarate 2.1e+06bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.can1.out.channel ber 0
 attr mutable ""
 par GarbageNetwork.can1.out.channel per 0
 attr mutable ""
-par GarbageNetwork.smartphone.out[1].channel typename "\"SlowLink\""
+par GarbageNetwork.smartphone.out[1].channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.smartphone.out[1].channel disabled false
 attr mutable ""
 par GarbageNetwork.smartphone.out[1].channel delay 0.1s
 attr mutable ""
 attr unit s
-par GarbageNetwork.smartphone.out[1].channel datarate 1e+06bps
+par GarbageNetwork.smartphone.out[1].channel datarate 2.1e+06bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.smartphone.out[1].channel ber 0
 attr mutable ""
 par GarbageNetwork.smartphone.out[1].channel per 0
 attr mutable ""
-par GarbageNetwork.can2.out.channel typename "\"SlowLink\""
+par GarbageNetwork.can2.out.channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.can2.out.channel disabled false
 attr mutable ""
 par GarbageNetwork.can2.out.channel delay 0.1s
 attr mutable ""
 attr unit s
-par GarbageNetwork.can2.out.channel datarate 1e+06bps
+par GarbageNetwork.can2.out.channel datarate 2.1e+06bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.can2.out.channel ber 0
 attr mutable ""
 par GarbageNetwork.can2.out.channel per 0
 attr mutable ""
-par GarbageNetwork.smartphone.out[2].channel typename "\"SlowLink\""
+par GarbageNetwork.smartphone.out[2].channel typename "\"Smartphone_Cloud_Link\""
 par GarbageNetwork.smartphone.out[2].channel disabled false
 attr mutable ""
-par GarbageNetwork.smartphone.out[2].channel delay 0.1s
+par GarbageNetwork.smartphone.out[2].channel delay 0.005s
 attr mutable ""
 attr unit s
-par GarbageNetwork.smartphone.out[2].channel datarate 1e+06bps
+par GarbageNetwork.smartphone.out[2].channel datarate 3.4e+08bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.smartphone.out[2].channel ber 0
 attr mutable ""
 par GarbageNetwork.smartphone.out[2].channel per 0
 attr mutable ""
-par GarbageNetwork.cloud.out[0].channel typename "\"SlowLink\""
+par GarbageNetwork.cloud.out[0].channel typename "\"Smartphone_Cloud_Link\""
 par GarbageNetwork.cloud.out[0].channel disabled false
 attr mutable ""
-par GarbageNetwork.cloud.out[0].channel delay 0.1s
+par GarbageNetwork.cloud.out[0].channel delay 0.005s
 attr mutable ""
 attr unit s
-par GarbageNetwork.cloud.out[0].channel datarate 1e+06bps
+par GarbageNetwork.cloud.out[0].channel datarate 3.4e+08bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.cloud.out[0].channel ber 0
 attr mutable ""
 par GarbageNetwork.cloud.out[0].channel per 0
 attr mutable ""
-par GarbageNetwork.can1.outCloud.channel typename "\"FastLink\""
+par GarbageNetwork.can1.outCloud.channel typename "\"Can_Cloud_Link\""
 par GarbageNetwork.can1.outCloud.channel disabled false
 attr mutable ""
-par GarbageNetwork.can1.outCloud.channel delay 0.01s
+par GarbageNetwork.can1.outCloud.channel delay 0.025s
 attr mutable ""
 attr unit s
-par GarbageNetwork.can1.outCloud.channel datarate 1e+07bps
+par GarbageNetwork.can1.outCloud.channel datarate 1e+08bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.can1.outCloud.channel ber 0
 attr mutable ""
 par GarbageNetwork.can1.outCloud.channel per 0
 attr mutable ""
-par GarbageNetwork.cloud.out[1].channel typename "\"FastLink\""
+par GarbageNetwork.cloud.out[1].channel typename "\"Can_Cloud_Link\""
 par GarbageNetwork.cloud.out[1].channel disabled false
 attr mutable ""
-par GarbageNetwork.cloud.out[1].channel delay 0.01s
+par GarbageNetwork.cloud.out[1].channel delay 0.025s
 attr mutable ""
 attr unit s
-par GarbageNetwork.cloud.out[1].channel datarate 1e+07bps
+par GarbageNetwork.cloud.out[1].channel datarate 1e+08bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.cloud.out[1].channel ber 0
 attr mutable ""
 par GarbageNetwork.cloud.out[1].channel per 0
 attr mutable ""
-par GarbageNetwork.can2.outCloud.channel typename "\"FastLink\""
+par GarbageNetwork.can2.outCloud.channel typename "\"Can_Cloud_Link\""
 par GarbageNetwork.can2.outCloud.channel disabled false
 attr mutable ""
-par GarbageNetwork.can2.outCloud.channel delay 0.01s
+par GarbageNetwork.can2.outCloud.channel delay 0.025s
 attr mutable ""
 attr unit s
-par GarbageNetwork.can2.outCloud.channel datarate 1e+07bps
+par GarbageNetwork.can2.outCloud.channel datarate 1e+08bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.can2.outCloud.channel ber 0
 attr mutable ""
 par GarbageNetwork.can2.outCloud.channel per 0
 attr mutable ""
-par GarbageNetwork.cloud.out[2].channel typename "\"FastLink\""
+par GarbageNetwork.cloud.out[2].channel typename "\"Can_Cloud_Link\""
 par GarbageNetwork.cloud.out[2].channel disabled false
 attr mutable ""
-par GarbageNetwork.cloud.out[2].channel delay 0.01s
+par GarbageNetwork.cloud.out[2].channel delay 0.025s
 attr mutable ""
 attr unit s
-par GarbageNetwork.cloud.out[2].channel datarate 1e+07bps
+par GarbageNetwork.cloud.out[2].channel datarate 1e+08bps
 attr mutable ""
 attr unit bps
 par GarbageNetwork.cloud.out[2].channel ber 0
@@ -157,12 +158,23 @@ par GarbageNetwork.cloud.out[2].channel per 0
 attr mutable ""
 par GarbageNetwork.smartphone typename "\"Smartphone\""
 par GarbageNetwork.smartphone mode "\"fast\""
+par GarbageNetwork.smartphone mobilityConfig "<movements>...</movements> at /Users/fredrikgaaso/Desktop/UIO/IN5700/omnetpp-6.2.0/workspace/Group_Project//routes.xml:2"
+par GarbageNetwork.smartphone mobilityUpdateInterval 0.1s
+attr unit s
 par GarbageNetwork.can1 typename "\"Can\""
 par GarbageNetwork.can1 hasGarbage true
 par GarbageNetwork.can1 mode "\"fast\""
+par GarbageNetwork.can1 canId 1
+par GarbageNetwork.can1 x 784
+par GarbageNetwork.can1 y 202
 par GarbageNetwork.can2 typename "\"Can\""
 par GarbageNetwork.can2 hasGarbage true
 par GarbageNetwork.can2 mode "\"fast\""
+par GarbageNetwork.can2 canId 2
+par GarbageNetwork.can2 x 1084
+par GarbageNetwork.can2 y 996
 par GarbageNetwork.cloud typename "\"Cloud\""
+par GarbageNetwork.cloud x 2300
+par GarbageNetwork.cloud y 750
 par GarbageNetwork typename "\"GarbageNetwork\""
 

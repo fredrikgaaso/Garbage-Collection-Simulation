@@ -80,7 +80,7 @@ private:
     void updateStatusText() {
         if (!statusText) return;
         char buf[64];
-        std::snprintf(buf, sizeof(buf), "sentFast:%d  rcvdFast:%d sentSlow:%d rcvdSlow:%d", sentFastTxt, rcvdFastTxt, sentSlowTxt, rcvdSlowTxt);
+        std::snprintf(buf, sizeof(buf), "sentFast:%d  rcvdFast:%d sentSlow:%d rcvdSlow:%d",  sentSlowTxt, rcvdSlowTxt, sentFastTxt, rcvdFastTxt);
         statusText->setText(buf);
     }
 };

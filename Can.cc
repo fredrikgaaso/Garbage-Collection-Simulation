@@ -6,7 +6,7 @@ using namespace omnetpp;
 class Can : public cSimpleModule
 {
   private:
-    int sentFastTxt = 0, rcvdFastTxt = 0, sentSlowTxt = 0, rcvdSlowTxt = 0;
+    int sentFastTxt = 0, rcvdFastTxt = 0;
     cTextFigure *statusText = nullptr;
 
     bool hasGarbage = false;
@@ -43,7 +43,7 @@ class Can : public cSimpleModule
     void updateStatusText() {
         if (!statusText) return;
         char buf[64];
-        std::snprintf(buf, sizeof(buf), "sentFast:%d rcvdFast:%d sentSlow:%d rcvdSlow:%d numberOfLostMsgs:%d", sentFastTxt, rcvdFastTxt, sentSlowTxt, rcvdSlowTxt, lostCount);
+        std::snprintf(buf, sizeof(buf), "sentFast:%d rcvdFast:%d numberOfLostMsgs:%d", sentFastTxt, rcvdFastTxt, lostCount);
         statusText->setText(buf);
     }
 };
@@ -102,7 +102,7 @@ void Can::handleMessage(cMessage *msg)
         rcvdFastTxt++;
         updateStatusText();
     } else {
-        rcvdSlowTxt++;
+        rcvdFastTxt++;
           updateStatusText();
     }
 
@@ -129,7 +129,7 @@ void Can::handleMessage(cMessage *msg)
                }
                 reply->setPrevHopDelay(inbound);
                 reply->setSentTime(simTime().dbl());
-                sentSlowTxt++;
+                sentFastTxt++;
                 updateStatusText();
                 send(reply, "out");
 
@@ -153,7 +153,7 @@ void Can::handleMessage(cMessage *msg)
                 reply->setIsAck(false);
                 reply->setPrevHopDelay(inbound);
                 reply->setSentTime(simTime().dbl());
-                sentSlowTxt++;
+                sentFastTxt++;
                 updateStatusText();
                 send(reply, "out");
             }

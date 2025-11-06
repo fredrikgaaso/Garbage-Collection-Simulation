@@ -1,23 +1,23 @@
 channel Smartphone_Cloud_Link extends ned.DatarateChannel
 {
-    delay = 5ms;
-    datarate = 340Mbps;
+    delay = 80ms;
+    datarate = 50Mbps;
 }
 channel Can_Cloud_Link extends ned.DatarateChannel
 {
     delay = 25ms;
-    datarate = 100Mbps;
+    datarate = 200Mbps;
 }
 
 channel Smartphone_Can_Link extends ned.DatarateChannel
 {
-    delay = 100ms;
-    datarate = 2.1Mbps;
+    delay = 10ms;
+    datarate = 100Mbps;
 }	
 
 network GarbageNetwork
 {
-    @display("bgb=4300,1600");
+    @display("bgb=5000,1600");
     @figure[background](type=rectangle; pos=0,0; size=2600,1600; fillColor="#d0d0d0"; lineColor="#b0b0b0"; lineWidth=1; zIndex=-10);
     @figure[outerTop](type=rectangle; pos=450,300; size=1820,3; fillColor="#000000"; lineColor="#000000"; zIndex=-5);
     @figure[outerBottom](type=rectangle; pos=450,1377; size=1820,3; fillColor="#000000"; lineColor="#000000"; zIndex=-5);

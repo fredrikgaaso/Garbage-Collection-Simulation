@@ -214,7 +214,7 @@ void Smartphone::initialize()
                                    : "No-garbage");
                    title->setFont(cFigure::Font("Arial", 50));
                    title->setColor(cFigure::BLACK);
-                   title->setPosition(cFigure::Point(X + 20, Y + 20));
+                   title->setPosition(cFigure::Point(X + 500, Y + 20));
                    canvas->addFigure(title);
 
                    // body text (multi-line)
@@ -222,7 +222,7 @@ void Smartphone::initialize()
                    body->setText(pickBody(mode).c_str());
                    body->setFont(cFigure::Font("Arial", 50));
                    body->setColor(cFigure::BLACK);
-                   body->setPosition(cFigure::Point(X + 20, Y + 70));
+                   body->setPosition(cFigure::Point(X + 500, Y + 70));
                    canvas->addFigure(body);
 
                    statusText = new cTextFigure(("status-" + std::string(getName())).c_str());
@@ -787,7 +787,7 @@ void Smartphone::updateRadiusFigure(const Coord& coord)
 void Smartphone::updateStatusText() {
     if (!statusText) return;
        char buf[64];
-       std::snprintf(buf, sizeof(buf), "sentFast:%d  rcvdFast:%d sentSlow:%d rcvdSlow:%d", sentFastTxt, rcvdFastTxt, sentSlowTxt, rcvdSlowTxt);
+       std::snprintf(buf, sizeof(buf), "sentFast:%d  rcvdFast:%d sentSlow:%d rcvdSlow:%d",  sentSlowTxt, rcvdSlowTxt, sentFastTxt, rcvdFastTxt);
        statusText->setText(buf);
 }
 void Smartphone::finish(){

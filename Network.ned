@@ -11,7 +11,7 @@ channel Can_Cloud_Link extends ned.DatarateChannel
 
 channel Smartphone_Can_Link extends ned.DatarateChannel
 {
-    delay = 10ms;
+    delay = 38ms;
     datarate = 100Mbps;
 }	
 

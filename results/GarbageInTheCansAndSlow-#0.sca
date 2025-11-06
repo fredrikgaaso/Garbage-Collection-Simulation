@@ -1,8 +1,8 @@
 version 3
-run GarbageInTheCansAndSlow-0-20251106-18:07:20-43761
+run GarbageInTheCansAndSlow-0-20251106-19:27:55-46335
 attr configname GarbageInTheCansAndSlow
-attr datetime 20251106-18:07:20
-attr datetimef 20251106-180720
+attr datetime 20251106-19:27:55
+attr datetimef 20251106-192755
 attr experiment GarbageInTheCansAndSlow
 attr inifile omnetpp.ini
 attr iterationvars ""
@@ -10,7 +10,7 @@ attr iterationvarsd ""
 attr iterationvarsf ""
 attr measurement ""
 attr network GarbageNetwork
-attr processid 43761
+attr processid 46335
 attr repetition 0
 attr replication #0
 attr resultdir results
@@ -29,7 +29,7 @@ config sim-time-limit 100s
 par GarbageNetwork.smartphone.out[0].channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.smartphone.out[0].channel disabled false
 attr mutable ""
-par GarbageNetwork.smartphone.out[0].channel delay 0.01s
+par GarbageNetwork.smartphone.out[0].channel delay 0.038s
 attr mutable ""
 attr unit s
 par GarbageNetwork.smartphone.out[0].channel datarate 1e+08bps
@@ -42,7 +42,7 @@ attr mutable ""
 par GarbageNetwork.can1.out.channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.can1.out.channel disabled false
 attr mutable ""
-par GarbageNetwork.can1.out.channel delay 0.01s
+par GarbageNetwork.can1.out.channel delay 0.038s
 attr mutable ""
 attr unit s
 par GarbageNetwork.can1.out.channel datarate 1e+08bps
@@ -55,7 +55,7 @@ attr mutable ""
 par GarbageNetwork.smartphone.out[1].channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.smartphone.out[1].channel disabled false
 attr mutable ""
-par GarbageNetwork.smartphone.out[1].channel delay 0.01s
+par GarbageNetwork.smartphone.out[1].channel delay 0.038s
 attr mutable ""
 attr unit s
 par GarbageNetwork.smartphone.out[1].channel datarate 1e+08bps
@@ -68,7 +68,7 @@ attr mutable ""
 par GarbageNetwork.can2.out.channel typename "\"Smartphone_Can_Link\""
 par GarbageNetwork.can2.out.channel disabled false
 attr mutable ""
-par GarbageNetwork.can2.out.channel delay 0.01s
+par GarbageNetwork.can2.out.channel delay 0.038s
 attr mutable ""
 attr unit s
 par GarbageNetwork.can2.out.channel datarate 1e+08bps

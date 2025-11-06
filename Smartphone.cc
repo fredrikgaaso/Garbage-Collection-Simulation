@@ -119,7 +119,7 @@ class Smartphone : public cSimpleModule
                     "Slow connection from others to the Cloud (time it takes) =\n"
                     "Fast connection from the Cloud to others (time it takes) =0\n"
                     "Fast connection from others to the Cloud (time it takes) =0";
-        } else { // "none"
+        } else {
             return
                     "Slow connection from the smartphone to others (time it takes) =\n"
                     "Slow connection from others to the smartphone (time it takes) =\n"
@@ -186,7 +186,6 @@ void Smartphone::initialize()
     collectSent[CAN1] = collectSent[CAN2] = false;
 
     bool fallbackActivation[2] = {false, false};
-    // fetch can display positions to align interaction checkpoints
     if (!loadCanPosition("can1", CAN1)) {
         fallbackActivation[CAN1] = true;
     }
@@ -207,7 +206,6 @@ void Smartphone::initialize()
 
 
 
-                   // title
                    title = new cTextFigure("legendTitle");
                    title->setText(mode == "fast" ? "Fog-based (fast)"
                                    : mode == "slow" ? "Cloud-based (slow)"
@@ -217,7 +215,6 @@ void Smartphone::initialize()
                    title->setPosition(cFigure::Point(X + 500, Y + 20));
                    canvas->addFigure(title);
 
-                   // body text (multi-line)
                    body = new cTextFigure("legendBody");
                    body->setText(pickBody(mode).c_str());
                    body->setFont(cFigure::Font("Arial", 50));
@@ -236,7 +233,6 @@ void Smartphone::initialize()
 
     setupMobility();
 
-    // ensure can positions are known and valid (matching Network.ned layout)
     canPositions[CAN1].x = x1;
     canPositions[CAN1].y = y1;
     canPositionValid[CAN1] = true;
@@ -303,44 +299,32 @@ void Smartphone::updateLegend() {
     if (!body) return;
 
     auto fmt = [](double vms) {
-        if (vms < 0) return std::string("0");        // not yet measured -> show 0 (like the videos)
+        if (vms < 0) return std::string("0");
         char b[32]; std::snprintf(b, sizeof(b), "%.2f ms", vms);
         return std::string(b);
     };
 
-    // Map the professor's generic phrasing to your links:
-    // "Slow connection from the smartphone to others"  -> BLE Smartphone -> Can
-    // "Slow connection from others to the smartphone"  -> BLE Can -> Smartphone
-    // "Fast connection from the smartphone to others"  -> Smartphone -> Cloud (slow mode) OR 0 in fast
-    // "Fast connection from others to the smartphone"  -> Cloud -> Smartphone
+
+
 
     std::ostringstream ss;
     ss.setf(std::ios::fixed); ss.precision(2);
 
-    // Slow side (BLE)
-    ss << "Slow connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCan1 + msPhoneToCan2 * numberOfMessagesSent) << "\n"
-       << "Slow connection from others to the smartphone (time it takes) = " << fmt(msCan1ToPhone + msCan2ToPhone) << "\n";
 
-    // Fast side (WAN). In slow mode: phone<->cloud; in fast mode: cloud->phone only
-    if (mode == "slow") {
-        ss << "Fast connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCloud) << "\n";
-    } else {
-        ss << "Fast connection from the smartphone to others (time it takes) = 0\n";
-    }
-    ss << "Fast connection from others to the smartphone (time it takes) = " << fmt(msCloudToPhone) << "\n\n";
-
-    // Extra lines for cans/cloud as in the professor’s layout
-    // Use the same measured numbers for both cans, or keep separate if you track per-can.
-    ss << "Connection from the can to others (time it takes) = " << fmt(msCan1ToCloud + msCan1ToPhone) << "\n"
-       << "Connection from others to the can (time it takes) = " << fmt(msCloudToCan1 + msPhoneToCan1) << "\n\n"
-       << "Connection from the anotherCan to others (time it takes) = " << fmt(msCan2ToCloud + msCan2ToPhone) << "\n"
-       << "Connection from others to the anotherCan (time it takes) = " << fmt(msCloudToCan2 + msPhoneToCan2) <<"\n\n"
+    ss << "Slow connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCloud) << "\n"
+            << "Slow connection from others to the smartphone (time it takes) = " << fmt(msPhoneToCloud) << "\n"
+            <<"Fast connection from the smartphone to others (time it takes) = " << fmt(msPhoneToCan1 + msPhoneToCan2 * numberOfMessagesSent) << "\n"
+            << "Fast connection from others to the smartphone (time it takes) = " << fmt(msPhoneToCan1 + msPhoneToCan2) << "\n\n"
+            << "Connection from the can to others (time it takes) = " << fmt(msCan1ToCloud + msCan1ToPhone) << "\n"
+            << "Connection from others to the can (time it takes) = " << fmt(msCloudToCan1 + msPhoneToCan1) << "\n\n"
+            << "Connection from the anotherCan to others (time it takes) = " << fmt(msCan2ToCloud + msCan2ToPhone) << "\n"
+            << "Connection from others to the anotherCan (time it takes) = " << fmt(msCloudToCan2 + msPhoneToCan2) <<"\n\n"
+            << "Slow connection from the Cloud to others (time it takes) = "<< fmt(msPhoneToCloud) << "\n"
+            << "Slow connection from others to the Cloud (time it takes) = " << fmt(msPhoneToCloud) << "\n"
+            << "Fast connection from the Cloud to others (time it takes) = "<< fmt(msCan1ToCloud + msCan2ToCloud) <<"\n"
+            << "Fast connection from others to the Cloud (time it takes) = " << fmt(msCloudToCan1 + msCloudToCan2);
 
 
-       << "Slow connection from the Cloud to others (time it takes) = "<< fmt(msCloudToCan1 + msCloudToCan2) << "\n"
-       << "Slow connection from others to the Cloud (time it takes) = " << fmt(msCan1ToCloud + msCan2ToCloud) << "\n"
-       << "Fast connection from the Cloud to others (time it takes) = "<< fmt(msCloudToPhone) <<"\n"
-       << "Fast connection from others to the Cloud (time it takes) = " << fmt(msPhoneToCloud);
 
     body->setText(ss.str().c_str());
 }
@@ -409,7 +393,7 @@ void Smartphone::handleMessage(cMessage *msg)
                     EV << "Triggered ID 3 (Can1 <-> Cloud)"
                        << " | Can→Cloud: " << msCan1ToCloud
                        << " | Cloud→Can: " << msCloudToCan1 << "\n";
-                } else { // id == 6
+                } else {
                     msCan2ToCloud += gm->getPrevHopDelay() * 1000;
                     msCloudToCan2 += travelTime * 1000;
                     EV << "Triggered ID 6 (Can2 <-> Cloud)"

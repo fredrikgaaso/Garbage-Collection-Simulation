@@ -24,11 +24,10 @@ private:
                           radiusFigure->setLineColor(cFigure::BLUE);
                           radiusFigure->setLineWidth(1);
                           radiusFigure->setFillColor(cFigure::BLUE);
-                          radiusFigure->setFillOpacity(0.0);   // faint filled circle
+                          radiusFigure->setFillOpacity(0.0);
                           canvas->addFigure(radiusFigure);
                       }
 
-                      // Center the oval at (posX, posY) with radius interactionRadius
                       const double r = interactionRadius;
                       cFigure::Rectangle bounds(posX - r, posY - r, 2*r, 2*r);
                       radiusFigure->setBounds(bounds);
@@ -90,11 +89,9 @@ void Cloud::initialize()
 {
 
 
-    // read position from NED parameters
     posX = par("x").doubleValue();
     posY = par("y").doubleValue();
 
-    // optionally allow radius to be set from NED as a parameter too
     if (hasPar("range"))
         interactionRadius = par("range").doubleValue();
 
